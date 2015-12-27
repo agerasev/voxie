@@ -138,9 +138,9 @@ public:
 			data[i + 0] = 0xff*x;
 			data[i + 1] = 0xff*y;
 			data[i + 2] = 0xff*z;
-			data[i + 3] = 0xff*clamp(0.9 - (x*x + y*y + z*z));
+			data[i + 3] = 0xff*((0.9 - (x*x + y*y + z*z)) > 0.0);
 		}
-		texture.loadData(3, data, bs, gl::Texture::RGBA, gl::Texture::UBYTE, gl::Texture::LINEAR);
+		texture.loadData(3, data, bs, gl::Texture::RGBA, gl::Texture::UBYTE, gl::Texture::NEAREST);
 		delete[] data;
 		
 		model(3, 0) = 0.25;
