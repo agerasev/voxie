@@ -14,6 +14,14 @@
 
 #include "la/mat.hpp"
 
+double clamp(double a) {
+	if(a < 0.0)
+		return 0.0;
+	if(a > 1.0)
+		return 1.0;
+	return a;
+}
+
 class Graphics {
 private:
 	int width = 0, height = 0;
@@ -117,8 +125,8 @@ public:
 		};
 		cube_buffer.loadData(cube_data, 6*2*3*4);
 		
-		int bs[3] = {4,4,4};
-		float *data = new float[3*bs[0]*bs[1]*bs[2]];
+		int bs[3] = {16,16,16};
+		unsigned char *data = new unsigned char[4*bs[0]*bs[1]*bs[2]];
 		for(int iz = 0; iz < bs[2]; ++iz)
 		for(int iy = 0; iy < bs[1]; ++iy)
 		for(int ix = 0; ix < bs[0]; ++ix) {
@@ -126,21 +134,29 @@ public:
 			  x = double(ix)/bs[0], 
 			  y = double(iy)/bs[1],
 			  z = double(iz)/bs[2];
-			int i = 3*((iz*bs[1] + iy)*bs[0] + ix);
-			data[i + 0] = x;
-			data[i + 1] = y;
-			data[i + 2] = z;
+			int i = 4*((iz*bs[1] + iy)*bs[0] + ix);
+			data[i + 0] = 0xff*x;
+			data[i + 1] = 0xff*y;
+			data[i + 2] = 0xff*z;
+			data[i + 3] = 0xff*clamp(0.9 - (x*x + y*y + z*z));
 		}
-		texture.loadData(3, data, bs, gl::Texture::RGB, gl::Texture::FLOAT, gl::Texture::NEAREST);
+		texture.loadData(3, data, bs, gl::Texture::RGBA, gl::Texture::UBYTE, gl::Texture::LINEAR);
 		delete[] data;
+		
+		model(3, 0) = 0.25;
+		model(3, 1) = 0.25;
+		model(3, 2) = 0.25;
 		
 		move(0,0);
 		
 		programs["draw"]->setAttribute("a_vertex", &cube_buffer);
 		programs["draw"]->setUniform("u_texture", &texture);
+		programs["draw"]->setUniform("u_tex_size", bs, 3);
 		
 		glEnable(GL_DEPTH_TEST);
-		glClearColor(0.5f,0.5f,0.5f,1.0f);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glEnable(GL_BLEND);
+		glClearColor(0.2f,0.2f,0.2f,1.0f);
 	}
 	
 	~Graphics() {
@@ -164,6 +180,14 @@ public:
 		programs["draw"]->setUniform("u_model", model.data(), 16);
 		programs["draw"]->setUniform("u_view",  view.data(),  16);
 		programs["draw"]->setUniform("u_proj",  proj.data(),  16);
+		
+		fmat4 tb = unifmat4;
+		tb(3,3) = 0.0;
+		tb = view*(model*tb);
+		fmat3 tex_basis(tb(0,0), tb(1,0), tb(2,0), tb(0,1), tb(1,1), tb(2,1), tb(0,2), tb(1,2), tb(2,2));
+		tex_basis = invert(tex_basis);
+		programs["draw"]->setUniform("u_tex_basis", tex_basis.data(), 9);
+		
 		programs["draw"]->evaluate();
 		glFlush();
 	}
@@ -198,11 +222,11 @@ public:
 		fvec3 z = normalize(p);
 		fvec3 x = normalize(fvec3(0, 0, 1) ^ z);
 		fvec3 y = z ^ x;
-		return invert(transpose(fmat4(
-		  x.x(), x.y(), x.z(), 0,
-		  y.x(), y.y(), y.z(), 0,
-		  z.x(), z.y(), z.z(), 0,
-		  p.x(), p.y(), p.z(), 1
-		)));
+		return invert(fmat4(
+		  x.x(), y.x(), z.x(), p.x(),
+		  x.y(), y.y(), z.y(), p.y(),
+		  x.z(), y.z(), z.z(), p.z(),
+		  0, 0, 0, 1
+		));
 	}
 };
