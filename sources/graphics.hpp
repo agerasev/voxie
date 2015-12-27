@@ -46,11 +46,17 @@ private:
 	};
 	
 	fmat4 
-	  model = unifmat4, 
 	  view  = unifmat4,
 	  proj  = unifmat4;
 	float phi = 0.0, theta = 0.0, radius = 1.6;
-
+	
+	fmat3 get_tex_basis(const fmat4 &model, const fmat4 &view) {
+		fmat4 tb = unifmat4;
+		tb(3,3) = 0.0;
+		tb = view*(model*tb);
+		return invert(fmat3(tb(0,0), tb(1,0), tb(2,0), tb(0,1), tb(1,1), tb(2,1), tb(0,2), tb(1,2), tb(2,2)));
+	}
+	
 public:
 	Graphics()
 	{
@@ -143,10 +149,6 @@ public:
 		texture.loadData(3, data, bs, gl::Texture::RGBA, gl::Texture::UBYTE, gl::Texture::NEAREST);
 		delete[] data;
 		
-		model(3, 0) = 0.25;
-		model(3, 1) = 0.25;
-		model(3, 2) = 0.25;
-		
 		move(0,0);
 		
 		programs["draw"]->setAttribute("a_vertex", &cube_buffer);
@@ -177,18 +179,29 @@ public:
 	
 	void render() {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		programs["draw"]->setUniform("u_model", model.data(), 16);
+		
 		programs["draw"]->setUniform("u_view",  view.data(),  16);
 		programs["draw"]->setUniform("u_proj",  proj.data(),  16);
 		
-		fmat4 tb = unifmat4;
-		tb(3,3) = 0.0;
-		tb = view*(model*tb);
-		fmat3 tex_basis(tb(0,0), tb(1,0), tb(2,0), tb(0,1), tb(1,1), tb(2,1), tb(0,2), tb(1,2), tb(2,2));
-		tex_basis = invert(tex_basis);
-		programs["draw"]->setUniform("u_tex_basis", tex_basis.data(), 9);
-		
+		fmat4 model = unifmat4;
+		model(3, 1) = -0.2;
+		model(0, 0) = 1.4;
+		model(1, 1) = 1.4;
+		model(2, 2) = 1.4;
+		programs["draw"]->setUniform("u_model", model.data(), 16);
+		programs["draw"]->setUniform("u_tex_basis", get_tex_basis(model, view).data(), 9);
 		programs["draw"]->evaluate();
+		
+		model(3, 0) = -0.2;
+		model(3, 1) = 0.2;
+		model(3, 2) = 0.1;
+		model(0, 0) = -1;
+		model(1, 1) = -1;
+		model(2, 2) = 1;
+		programs["draw"]->setUniform("u_model", model.data(), 16);
+		programs["draw"]->setUniform("u_tex_basis", get_tex_basis(model, view).data(), 9);
+		programs["draw"]->evaluate();
+		
 		glFlush();
 	}
 	
