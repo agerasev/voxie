@@ -95,13 +95,16 @@ int main(int, char *[]) {
 		while(SDL_PollEvent(&event)) {
 			if(event.type == SDL_MOUSEMOTION) {
 				if(mouse)
-					gfx.move(event.motion.xrel, event.motion.yrel);
+					gfx.get_camera()->move(event.motion.xrel, event.motion.yrel);
 			} else if(event.type == SDL_MOUSEBUTTONDOWN) {
 				if(event.button.button == SDL_BUTTON_LEFT)
 					mouse = true;
 			} else if(event.type == SDL_MOUSEBUTTONUP) {
 				if(event.button.button == SDL_BUTTON_LEFT)
 					mouse = false;
+			} else if(event.type == SDL_MOUSEWHEEL) {
+				if(event.wheel.y)
+					gfx.get_camera()->zoom(-event.wheel.y);
 			} else if(event.type == SDL_QUIT) {
 				done = true;
 			} else if(event.type == SDL_KEYDOWN) {

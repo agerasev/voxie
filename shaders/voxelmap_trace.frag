@@ -1,4 +1,4 @@
-#version 130
+#version 120
 
 uniform sampler3D u_texture;
 uniform ivec3 u_tex_size;
@@ -9,6 +9,13 @@ varying vec3 v_tex_coord;
 varying vec3 v_tex_dir;
 varying float v_z_value;
 
+bool is_outside(vec3 sp, vec3 size) {
+	vec3 eps = 1e-3*size;
+	bvec3 lb = greaterThan(-eps, sp);
+	bvec3 hb = greaterThan(sp, size + eps);
+	return lb.x || lb.y || lb.z || hb.x || hb.y || hb.z;
+}
+
 void main() {
 	vec4 color = vec4(0.0, 0.0, 0.0, 0.0);
 	float depth = 1.0;
@@ -16,12 +23,25 @@ void main() {
 	vec3 dir = v_tex_dir;
 	
 	vec3 size = vec3(u_tex_size);
-	vec3 p = pos*size;
 	vec3 d = dir*size;
+	vec3 p = pos*size;
 	ivec3 id = ivec3(sign(d));
 	ivec3 ip = ivec3(ceil(p))*ivec3(greaterThan(id,ivec3(0,0,0))) + ivec3(floor(p))*ivec3(greaterThan(ivec3(0,0,0),id));
+	
+	vec3 sp = p;
+	depth = -u_proj[2][2] - u_proj[3][2]/v_z_value;
+	
 	int i;
 	for(i = 0; i < 0x1000; ++i) {
+		if(is_outside(sp,size)) {
+			depth = 1.0;
+			break;
+		}
+		color = texture3D(u_texture, sp/size);
+		if(color.a > 0.9) {
+			break;
+		}
+		
 		ivec3 dip;
 		vec3 ts;
 		float t;
@@ -43,19 +63,11 @@ void main() {
 				t = ts.z;
 			}
 		}
-		vec3 sp = p + d*t + 0.5*vec3(dip);
-		bvec3 lb = greaterThan(vec3(0.0,0.0,0.0),sp);
-		bvec3 hb = greaterThan(sp,size);
-		if(lb.x || lb.y || lb.z || hb.x || hb.y || hb.z) {
-			depth = 1.0;
-			break;
-		}
-		ip += dip;
-		color = texture3D(u_texture, sp/size);
+		
+		sp = p + d*t + 0.5*vec3(dip);
 		depth = -u_proj[2][2] - u_proj[3][2]/(v_z_value*(1.0 + t));
-		if(color.a > 0.9) {
-			break;
-		}
+		
+		ip += dip;
 	}
 	
 	gl_FragDepth = depth;
