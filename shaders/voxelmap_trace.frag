@@ -1,47 +1,72 @@
-#version 120
+#version 130
 
 uniform sampler3D u_texture;
-uniform ivec3 u_tex_size;
+uniform sampler3D u_shadow;
+uniform ivec3 u_size;
 
+uniform mat4 u_tex;
+uniform mat4 u_model;
+uniform mat4 u_view;
 uniform mat4 u_proj;
 
-varying vec3 v_tex_coord;
-varying vec3 v_tex_dir;
-varying float v_z_value;
+uniform mat4 u_inv_tex;
+uniform mat4 u_inv_model;
+uniform mat4 u_inv_view;
 
-bool is_outside(vec3 sp, vec3 size) {
-	vec3 eps = 1e-3*size;
-	bvec3 lb = greaterThan(-eps, sp);
-	bvec3 hb = greaterThan(sp, size + eps);
+in vec4 v_tex_pos;
+in vec4 v_tex_norm;
+in vec4 v_tex_dir;
+in float v_z_value;
+
+out vec4 out_FragColor;
+
+bool is_outside(vec3 p, vec3 d, vec3 size) {
+	vec3 eps = 1e-2*size;
+	bvec3 lb = greaterThan(-eps, p);
+	bvec3 hb = greaterThan(p, size + eps);
 	return lb.x || lb.y || lb.z || hb.x || hb.y || hb.z;
 }
 
 void main() {
-	vec4 color = vec4(0.0, 0.0, 0.0, 0.0);
+	vec4 color = vec4(0.0);
+	float shadow = 1.0;
 	float depth = 1.0;
-	vec3 pos = v_tex_coord;
-	vec3 dir = v_tex_dir;
+	vec4 pos = v_tex_pos;
+	vec4 dir = v_tex_dir;
+	vec4 norm = v_tex_norm;
 	
-	vec3 size = vec3(u_tex_size);
-	vec3 d = dir*size;
-	vec3 p = pos*size;
+	vec3 size = vec3(u_size);
+	vec3 d = dir.xyz*size;
+	vec3 p = pos.xyz*size;
+	vec3 n = norm.xyz;
 	ivec3 id = ivec3(sign(d));
 	ivec3 ip = ivec3(ceil(p))*ivec3(greaterThan(id,ivec3(0,0,0))) + ivec3(floor(p))*ivec3(greaterThan(ivec3(0,0,0),id));
 	
-	vec3 sp = p;
+	vec3 sp = p, cp = p;
 	depth = -u_proj[2][2] - u_proj[3][2]/v_z_value;
 	
 	int i;
 	for(i = 0; i < 0x1000; ++i) {
-		if(is_outside(sp,size)) {
+		// break if point is outside
+		if(is_outside(sp,d,size)) {
 			depth = 1.0;
 			break;
 		}
-		color = texture3D(u_texture, sp/size);
+		
+		// get color and break if opaque enough
+		color.a = texelFetch(u_texture, ivec3(cp), 0).a;
 		if(color.a > 0.9) {
+			color.rgb = texture(u_texture, sp/size).rgb;
+			shadow = dot(texture(u_shadow, (sp + vec3(0.5))/(size + vec3(1))).rgb, abs(n));
+			// light
+			float diff = max(0.0, -dot(normalize(u_view*u_model*u_inv_tex*vec4(n, 0.0)), normalize(vec4((u_view*u_model*u_inv_tex*vec4(sp/size, 1.0)).xyz, 0.0))));
+			color.rgb *= diff;
+			if(diff > 0.0)
+				color.rgb += vec3(pow(diff, 64.0));
 			break;
 		}
 		
+		// choose next intersection plane
 		ivec3 dip;
 		vec3 ts;
 		float t;
@@ -64,14 +89,18 @@ void main() {
 			}
 		}
 		
-		sp = p + d*t + 0.5*vec3(dip);
+		// compute next intersection parameters
+		sp = p + d*t;
+		cp = sp + 0.5*vec3(dip);
 		depth = -u_proj[2][2] - u_proj[3][2]/(v_z_value*(1.0 + t));
+		n = vec3(-dip);
 		
+		// increment intersection iterator
 		ip += dip;
 	}
 	
 	gl_FragDepth = depth;
-	gl_FragColor = color;
+	out_FragColor = vec4(color.rgb*shadow, color.a);
 }
 
 
