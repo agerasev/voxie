@@ -4,9 +4,7 @@ project(voxie)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -std=c++11 -Wall -fpermissive")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -Wall")
 
-set(SOURCES
-	sources/main.cpp
-)
+set(SOURCES "")
 
 include_directories(submodules/libla)
 include_directories(submodules/libgl4u)
@@ -18,10 +16,10 @@ if(${WIN32})
 	link_directories(${GLEW_LINK_DIR})
 endif()
 
-add_executable(${PROJECT_NAME} ${SOURCES})
+add_executable(editor sources/editor_main.cpp ${SOURCES})
 
 if(${WIN32})
-	target_link_libraries(${PROJECT_NAME} mingw32 SDL2main SDL2 opengl32 glew32)
+	target_link_libraries(editor mingw32 SDL2main SDL2 opengl32 glew32)
 else()
-	target_link_libraries(${PROJECT_NAME} SDL2 GL GLEW)
+	target_link_libraries(editor SDL2 GL GLEW)
 endif()

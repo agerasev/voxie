@@ -44,9 +44,11 @@ public:
 			exit(1);
 		}
 		SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+		/*
 		SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 5);
 		SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 6);
 		SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 5);
+		*/
 		SDL_GL_SetSwapInterval(1);
 	}
 	~Context() {
@@ -122,6 +124,10 @@ int main(int argc, char *argv[]) {
 		context.swap();
 	}
 	
+	if(glGetError() != GL_NO_ERROR) {
+		fprintf(stderr, "there are OpenGL errors!\n");
+		return 1;
+	}
+	
 	return 0;
 }
-
