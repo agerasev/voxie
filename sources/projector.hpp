@@ -6,7 +6,7 @@ class Projector {
 public:
 	float f = 1e2, n = 1e-2;
 	float w = n, h = n;
-	fmat4 proj;
+	fmat4 proj = unifmat4;
 	void update(int sw, int sh) {
 		w = (float)sw/sh*h;
 		proj(0, 0) = n/w;

@@ -1,5 +1,10 @@
 #pragma once
 
+#include <cmath>
+#ifndef M_PI
+#define M_PI 3.1415
+#endif // M_PI
+
 #include <la/mat.hpp>
 
 class Camera {
@@ -23,10 +28,10 @@ public:
 		const float d = 1e-4;
 		phi -= 0.01*dx;
 		theta += 0.01*dy;
-		if(theta > M_PI_2 - d)
-			theta = M_PI_2 - d;
-		if(theta < -M_PI_2 + d)
-			theta = -M_PI_2 + d;
+		if(theta > 0.5*M_PI - d)
+			theta = 0.5*M_PI - d;
+		if(theta < -0.5*M_PI + d)
+			theta = -0.5*M_PI + d;
 		update_view();
 	}
 	

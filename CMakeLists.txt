@@ -11,6 +11,17 @@ set(SOURCES
 include_directories(submodules/libla)
 include_directories(submodules/libgl4u)
 
+if(${WIN32})
+	include_directories(${SDL2_INCLUDE_DIR})
+	include_directories(${GLEW_INCLUDE_DIR})
+	link_directories(${SDL2_LINK_DIR})
+	link_directories(${GLEW_LINK_DIR})
+endif()
+
 add_executable(${PROJECT_NAME} ${SOURCES})
 
-target_link_libraries(${PROJECT_NAME} SDL2 GL GLEW)
+if(${WIN32})
+	target_link_libraries(${PROJECT_NAME} mingw32 SDL2main SDL2 opengl32 glew32)
+else()
+	target_link_libraries(${PROJECT_NAME} SDL2 GL GLEW)
+endif()
