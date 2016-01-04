@@ -99,10 +99,15 @@ int main(int argc, char *argv[]) {
 				if(mouse)
 					gfx.get_camera()->move(event.motion.xrel, event.motion.yrel);
 			} else if(event.type == SDL_MOUSEBUTTONDOWN) {
-				if(event.button.button == SDL_BUTTON_LEFT)
+				if(event.button.button == SDL_BUTTON_MIDDLE) {
 					mouse = true;
+				} else if(event.button.button == SDL_BUTTON_LEFT) {
+					gfx.remove(event.button.x, event.button.y);
+				} else if(event.button.button == SDL_BUTTON_RIGHT) {
+					gfx.add(event.button.x, event.button.y);
+				}
 			} else if(event.type == SDL_MOUSEBUTTONUP) {
-				if(event.button.button == SDL_BUTTON_LEFT)
+				if(event.button.button == SDL_BUTTON_MIDDLE)
 					mouse = false;
 			} else if(event.type == SDL_MOUSEWHEEL) {
 				if(event.wheel.y)

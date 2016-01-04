@@ -54,7 +54,7 @@ void main() {
 		}
 		
 		// get color and break if opaque enough
-		color.a = texelFetch(u_texture, ivec3(cp), 0).a;
+		color.a = texelFetch(u_texture, ivec3(floor(cp)), 0).a;
 		if(color.a > 0.9) {
 			color.rgb = texture(u_texture, sp/size).rgb;
 			shadow = dot(texture(u_shadow, (sp + vec3(0.5))/(size + vec3(1))).rgb, abs(n));
