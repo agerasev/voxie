@@ -18,7 +18,7 @@
 #include "cube.hpp"
 
 class Graphics {
-private:
+public:
 	int width = 0, height = 0;
 	
 	gl::Shader place, trace;
@@ -32,9 +32,8 @@ private:
 	std::vector<unsigned char> vox_map_data;
 	int vox_map_size[3] = {16,16,16};
 	fmat4 model = unifmat4;
-
-public:
-	Graphics() : place(gl::Shader::VERTEX), trace(gl::Shader::FRAGMENT) {
+	
+	Graphics(const int size[3], unsigned char *in_data = nullptr) : place(gl::Shader::VERTEX), trace(gl::Shader::FRAGMENT) {
 		place.loadSourceFromFile("shaders/voxelmap_place.vert");
 		trace.loadSourceFromFile("shaders/voxelmap_trace.frag");
 		place.compile();
@@ -45,21 +44,37 @@ public:
 		program.attach(&trace);
 		program.link();
 		
+		vox_map_size[0] = size[0];
+		vox_map_size[1] = size[1];
+		vox_map_size[2] = size[2];
+		
 		const int *bs = vox_map_size;
 		vox_map_data.resize(4*bs[0]*bs[1]*bs[2]);
 		unsigned char *data = vox_map_data.data();
-		for(int iz = 0; iz < bs[2]; ++iz)
-		for(int iy = 0; iy < bs[1]; ++iy)
-		for(int ix = 0; ix < bs[0]; ++ix) {
-			double 
-			  x = double(ix)/bs[0], 
-			  y = double(iy)/bs[1],
-			  z = double(iz)/bs[2];
-			int i = 4*((iz*bs[1] + iy)*bs[0] + ix);
-			data[i + 0] = 0xff*x;
-			data[i + 1] = 0xff*y;
-			data[i + 2] = 0xff*z;
-			data[i + 3] = 0xff*((0.9 - (x*x + y*y + z*z)) > 0.0);
+		if(in_data == nullptr) {
+			for(int iz = 0; iz < bs[2]; ++iz)
+			for(int iy = 0; iy < bs[1]; ++iy)
+			for(int ix = 0; ix < bs[0]; ++ix) {
+				double 
+				  x = double(ix)/bs[0], 
+				  y = double(iy)/bs[1],
+				  z = double(iz)/bs[2];
+				int i = 4*((iz*bs[1] + iy)*bs[0] + ix);
+				data[i + 0] = 0xa0;//0xff*x;
+				data[i + 1] = 0xa0;//0xff*y;
+				data[i + 2] = 0xa0;//0xff*z;
+				data[i + 3] = 0xff;//*((0.9 - (x*x + y*y + z*z)) > 0.0);
+			}
+		} else {
+			for(int iz = 0; iz < bs[2]; ++iz)
+			for(int iy = 0; iy < bs[1]; ++iy)
+			for(int ix = 0; ix < bs[0]; ++ix) {
+				int i = 4*((iz*bs[1] + iy)*bs[0] + ix);
+				data[i + 0] = in_data[i + 0];
+				data[i + 1] = in_data[i + 1];
+				data[i + 2] = in_data[i + 2];
+				data[i + 3] = in_data[i + 3];
+			}
 		}
 		vox_map.init(bs, data);
 		
@@ -116,6 +131,37 @@ public:
 				vox_map_data[4*((under.z()*bs[1] + under.y())*bs[0] + under.x()) + 3] = 0x00;
 				vox_map.init(bs, vox_map_data.data());
 			}
+		}
+	}
+	
+	ivec3 prev = fvec3(-1,-1,-1);
+	void highlight(int mx, int my) {
+		ivec3 next = fvec3(-1,-1,-1);
+		bool upd = false;
+		ivec3 under, over;
+		if(intersect(mx, my, under, over)) {
+			next = under;
+		}
+		if(next.x() != prev.x() || next.y() != prev.y() || next.z() != prev.z()) {
+			const int *bs = vox_map_size;
+			if(prev.x() >= 0 && prev.x() < bs[0] && prev.y() >= 0 && prev.y() < bs[1] && prev.z() >= 0 && prev.z() < bs[2]) {
+				int i = 4*((prev.z()*bs[1] + prev.y())*bs[0] + prev.x());
+				vox_map_data[i + 0] = 0xa0;
+				vox_map_data[i + 1] = 0xa0;
+				vox_map_data[i + 2] = 0xa0;
+				upd = true;
+			}
+			if(next.x() >= 0 && next.x() < bs[0] && next.y() >= 0 && next.y() < bs[1] && next.z() >= 0 && next.z() < bs[2]) {
+				int i = 4*((next.z()*bs[1] + next.y())*bs[0] + next.x());
+				vox_map_data[i + 0] = 0xff;
+				vox_map_data[i + 1] = 0xff;
+				vox_map_data[i + 2] = 0x00;
+				upd = true;
+			}
+			prev = next;
+		}
+		if(upd) {
+			vox_map.init(vox_map_size, vox_map_data.data());
 		}
 	}
 	
@@ -193,8 +239,8 @@ public:
 		}
 		
 		if(found) {
-			printf("%d %d %d\n", under(0), under(1), under(2));
-			fflush(stdout);
+			//printf("%d %d %d\n", under(0), under(1), under(2));
+			//fflush(stdout);
 			return true;
 		}
 		

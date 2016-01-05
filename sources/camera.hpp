@@ -10,11 +10,13 @@
 class Camera {
 public:
 	fmat4 view = unifmat4;
-	float phi = 0.0, theta = 0.0, radius = 1.6;
+	float phi = M_PI, theta = 0.0;
+	fvec3 pos = fvec3(0.6,0,0);
+	fvec3 dir = fvec3(-1,0,0);
 	
-	fmat4 look_from(fvec3 p) {
-		fvec3 z = normalize(p);
-		fvec3 x = normalize(fvec3(0, 0, 1) ^ z);
+	static fmat4 look(fvec3 p, fvec3 d) {
+		fvec3 z = -normalize(d);
+		fvec3 x = normalize(fvec3(0,0,1)^z);
 		fvec3 y = z ^ x;
 		return invert(fmat4(
 		  x.x(), y.x(), z.x(), p.x(),
@@ -26,8 +28,9 @@ public:
 	
 	void move(int dx, int dy) {
 		const float d = 1e-4;
-		phi -= 0.01*dx;
-		theta += 0.01*dy;
+		const float s = 4e-3;
+		phi -= s*dx;
+		theta -= s*dy;
 		if(theta > 0.5*M_PI - d)
 			theta = 0.5*M_PI - d;
 		if(theta < -0.5*M_PI + d)
@@ -35,16 +38,12 @@ public:
 		update_view();
 	}
 	
-	void zoom(int z) {
-		radius *= pow(1.12, z);
-		update_view();
-	}
-	
 	void update_view() {
-		view = look_from(vec3(
-		  radius*cos(phi)*cos(theta),
-		  radius*sin(phi)*cos(theta),
-		  radius*sin(theta)
-		));
+		dir = vec3(
+		cos(phi)*cos(theta),
+	    sin(phi)*cos(theta),
+	    sin(theta)
+		);
+		view = look(pos,dir);
 	}
 };

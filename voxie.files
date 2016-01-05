@@ -19,3 +19,7 @@ shaders/voxelmap_place.vert
 shaders/voxelmap_trace.frag
 .gitignore
 sources/editor_main.cpp
+scripts/build.sh
+scripts/clean.sh
+scripts/init.sh
+scripts/make.bat

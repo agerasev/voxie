@@ -22,7 +22,7 @@ public:
 	void init(const int size[3], const unsigned char *data = nullptr) {
 		for(int i = 0; i < 3; ++i)
 			this->size[i] = size[i];
-		color.loadData(3, data, size, gl::Texture::RGBA8, gl::Texture::RGBA, gl::Texture::UBYTE, gl::Texture::LINEAR);
+		color.loadData(3, data, size, gl::Texture::RGBA8, gl::Texture::RGBA, gl::Texture::UBYTE, gl::Texture::NEAREST);
 		
 		unsigned char *shdata = nullptr;
 		const int shsize[3] = {size[0] + 1, size[1] + 1, size[2] + 1};
