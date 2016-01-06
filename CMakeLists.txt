@@ -17,9 +17,13 @@ if(${WIN32})
 endif()
 
 add_executable(editor sources/editor_main.cpp ${SOURCES})
+#add_executable(terrain sources/terrain_main.cpp ${SOURCES})
 
 if(${WIN32})
-	target_link_libraries(editor mingw32 SDL2main SDL2 opengl32 glew32)
+	set(LIBS mingw32 SDL2main SDL2 opengl32 glew32)
 else()
-	target_link_libraries(editor SDL2 GL GLEW)
+	set(LIBS SDL2 GL GLEW)
 endif()
+
+target_link_libraries(editor ${LIBS})
+#target_link_libraries(terrain ${LIBS})
