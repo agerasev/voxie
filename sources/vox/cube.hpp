@@ -147,7 +147,7 @@ public:
 		
 		//draw clipping quad
 		fmat4 imv = invert(cam->view*model);
-		if(sqrt(abs2(imv*fvec4(0,0,0,1)) - 1) <= sqrt(3) + proj->n) {
+		if(sqrt(abs2(imv*fvec4(0,0,0,1)) - 1) <= 0.5*sqrt(3) + proj->n) {
 			float epsm = (1.0 + 1e-3);
 			fmat4 move = fmat4(
 			2*proj->w*epsm, 0, 0, 0,

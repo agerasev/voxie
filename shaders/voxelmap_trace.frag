@@ -23,7 +23,7 @@ in float v_z_value;
 out vec4 out_FragColor;
 
 bool is_outside(vec3 p, vec3 d, vec3 size) {
-	vec3 eps = 1e-2*size;
+	vec3 eps = 1e-3*size;
 	bvec3 lb = greaterThan(-eps, p);
 	bvec3 hb = greaterThan(p, size + eps);
 	return lb.x || lb.y || lb.z || hb.x || hb.y || hb.z;
