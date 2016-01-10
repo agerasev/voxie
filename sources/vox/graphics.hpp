@@ -66,20 +66,32 @@ public:
 		proj.update(w, h);
 	}
 	
+	template <typename S, typename T>
+	static bool cmp_pairs(const std::pair<S,T> &first, const std::pair<S,T> &second) {
+		return first.first < second.first;
+	}
+	
 	void render() {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
 		Camera *cam = dynamic_cast<Camera*>(storage->getObject(cam_id));
+		std::vector<std::pair<double,VoxelObject*>> vector;
 		if(cam != nullptr) {
 			for(Object *obj : *storage) {
 				VoxelObject *vobj = dynamic_cast<VoxelObject*>(obj);
 				if(vobj != nullptr) {
-					program.setUniform("u_size", vobj->map.size.data(), 3);
-					program.setUniform("u_texture", &vobj->map.color);
-					program.setUniform("u_shadow", &vobj->map.shadow);
-					program.setUniform("u_proj", proj.proj.data(), 16);
-					cube.draw(&proj, cam, vobj->model, &program);
+					double dist = abs2(vobj->model.col(3) - cam->model.col(3));
+					vector.push_back(std::pair<double,VoxelObject*>(dist, vobj));
 				}
+			}
+			std::sort(vector.data(), vector.data() + vector.size(), cmp_pairs<double,VoxelObject*>);
+			for(auto p : vector) {
+				VoxelObject *vobj = p.second;
+				program.setUniform("u_size", vobj->map.size.data(), 3);
+				program.setUniform("u_texture", &vobj->map.color);
+				program.setUniform("u_shadow", &vobj->map.shadow);
+				program.setUniform("u_proj", proj.proj.data(), 16);
+				cube.draw(&proj, cam, vobj->model, &program);
 			}
 		}
 		

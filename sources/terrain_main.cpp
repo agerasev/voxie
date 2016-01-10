@@ -13,7 +13,7 @@ typedef unsigned char ubyte;
 int main(int argc, char *argv[]) {
 	Engine engine;
 	
-	const ivec3 vs(16,16,16);
+	const ivec3 vs(64,64,16);
 	std::vector<ubyte> data;
 	data.resize(4*vs[0]*vs[1]*vs[2]);
 	
