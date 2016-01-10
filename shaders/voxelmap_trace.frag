@@ -29,6 +29,10 @@ bool is_outside(vec3 p, vec3 d, vec3 size) {
 	return lb.x || lb.y || lb.z || hb.x || hb.y || hb.z;
 }
 
+float get_depth(float z) {
+	return 0.5 - 0.5*(u_proj[2][2] + u_proj[3][2]/z);
+}
+
 void main() {
 	vec4 color = vec4(0.0);
 	float shadow = 1.0;
@@ -45,10 +49,12 @@ void main() {
 	ivec3 ip = ivec3(ceil(p))*ivec3(greaterThan(id,ivec3(0,0,0))) + ivec3(floor(p))*ivec3(greaterThan(ivec3(0,0,0),id));
 	
 	vec3 sp = p, cp = p;
-	depth = -u_proj[2][2] - u_proj[3][2]/v_z_value;
+	
+	depth = gl_FragCoord.z;
+	//depth = get_depth(v_z_value);
 	
 	int i;
-	for(i = 0; i < 0x1000; ++i) {
+	for(i = 0; i < u_size[0] + u_size[1] + u_size[2] + 3; ++i) {
 		// break if point is outside
 		if(is_outside(sp,d,size)) {
 			depth = 1.0;
@@ -94,7 +100,7 @@ void main() {
 		// compute next intersection parameters
 		sp = p + d*t;
 		cp = sp + 0.5*vec3(dip);
-		depth = -u_proj[2][2] - u_proj[3][2]/(v_z_value*(1.0 + t));
+		depth = get_depth(v_z_value*(1.0 + t));
 		n = vec3(-dip);
 		
 		// increment intersection iterator

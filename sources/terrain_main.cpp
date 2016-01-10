@@ -22,10 +22,11 @@ int main(int argc, char *argv[]) {
 		for(int ix = 0; ix < sx; ++ix) {
 			VoxelObject *vobj = new VoxelObject;
 			vobj->id = sx*iy + ix + 2;
-			vobj->model(0,0) = float(vs.x())/vs.z();
-			vobj->model(1,1) = float(vs.y())/vs.z();
-			vobj->model(3,0) = ix;
-			vobj->model(3,1) = iy;
+			float mx = float(vs.x())/vs.z(), my = float(vs.y())/vs.z();
+			vobj->model(0,0) = mx;
+			vobj->model(1,1) = my;
+			vobj->model(3,0) = mx*(ix - 0.5*(sx - 1));
+			vobj->model(3,1) = my*(iy - 0.5*(sy - 1));
 			vobj->model(3,2) = -1;
 			for(int ivz = 0; ivz < vs.z(); ++ivz)
 			for(int ivy = 0; ivy < vs.y(); ++ivy)
@@ -51,5 +52,9 @@ int main(int argc, char *argv[]) {
 	engine.getInput()->setCamera(1);
 	
 	engine.loop();
+	
+	for(Object *obj : *engine.getStorage())
+		delete obj;
+	
 	return 0;
 }
