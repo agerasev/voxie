@@ -28,8 +28,12 @@ sources/vox/engine.hpp
 sources/vox/window.hpp
 sources/vox/input.hpp
 sources/vox/graphics.hpp
-sources/vox/camera.hpp
 sources/vox/cube.hpp
 sources/vox/projector.hpp
 sources/vox/voxelmap.hpp
 sources/vox/storage.hpp
+
+sources/vox/objects/id.hpp
+sources/vox/objects/object.hpp
+sources/vox/objects/camera.hpp
+sources/vox/objects/voxelobject.hpp

@@ -1,5 +1,10 @@
 #pragma once
 
+#include <cmath>
+#ifndef M_PI
+#define M_PI 3.1415
+#endif // M_PI
+
 #include "window.hpp"
 #include "storage.hpp"
 #include "graphics.hpp"
@@ -18,6 +23,7 @@ private:
 	Storage *storage;
 	Graphics *graphics;
 	MouseListener *mouse_listener = nullptr;
+	ID cam_id = 0;
 	
 	int mousebits = 0;
 	int movebits = 0;
@@ -38,13 +44,26 @@ public:
 		mouse_listener = ml;
 	}
 	
+	void setCamera(ID id) {
+		cam_id = id;
+	}
+	
 	bool handle() {
-		Camera &cam = storage->cam;
+		Camera *cam = dynamic_cast<Camera*>(storage->getObject(cam_id));
 		SDL_Event event;
 		while(SDL_PollEvent(&event)) {
 			if(event.type == SDL_MOUSEMOTION) {
-				if(mousebits & (1<<2)) {
-					cam.move(event.motion.xrel, event.motion.yrel);
+				if(mousebits & (1<<2) && cam != nullptr) {
+					int dx = event.motion.xrel, dy = event.motion.yrel;
+					const float d = 1e-4;
+					const float s = 4e-3;
+					cam->phi -= s*dx;
+					cam->theta -= s*dy;
+					if(cam->theta > 0.5*M_PI - d)
+						cam->theta = 0.5*M_PI - d;
+					if(cam->theta < -0.5*M_PI + d)
+						cam->theta = -0.5*M_PI + d;
+					cam->update();
 				}
 				if(mouse_listener != nullptr) mouse_listener->move(event.motion.x, event.motion.y);
 				// graphics->highlight(event.button.x, event.button.y);
@@ -130,11 +149,11 @@ public:
 			  !!(movebits & (1<<3)) - !!(movebits & (1<<1)),
 			  !!(movebits & (1<<4)) - !!(movebits & (1<<5))
 			);
-			fvec3 dir = cam.dir;
+			fvec3 dir = cam->dir;
 			md = transpose(fmat3(dir, normalize(cross(dir, fvec3(0,0,1))), fvec3(0,0,1)))*md;
 			md *= spd*0.001*(tick - last_tick);
-			cam.pos += md;
-			cam.update_view();
+			cam->pos += md;
+			cam->update();
 		}
 		last_tick = tick;
 		

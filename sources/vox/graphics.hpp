@@ -14,10 +14,12 @@
 #include <la/mat.hpp>
 
 #include "projector.hpp"
-#include "camera.hpp"
 #include "cube.hpp"
 
 #include "storage.hpp"
+
+#include <vox/objects/camera.hpp>
+#include <vox/objects/voxelobject.hpp>
 
 class Graphics {
 public:
@@ -29,9 +31,8 @@ public:
 	Projector proj;
 	Cube cube;
 	
-	fmat4 model = unifmat4;
-	
 	Storage *storage;
+	ID cam_id = 0;
 	
 	Graphics(Storage *s) 
 	  : place(gl::Shader::VERTEX), trace(gl::Shader::FRAGMENT),
@@ -53,6 +54,10 @@ public:
 		glClearColor(0.2f,0.2f,0.2f,1.0f);
 	}
 	
+	void setCamera(ID id) {
+		cam_id = id;
+	}
+	
 	void resize(int w, int h) {
 		width = w;
 		height = h;
@@ -63,12 +68,19 @@ public:
 	void render() {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
-		program.setUniform("u_size", storage->vox.size.data(), 3);
-		program.setUniform("u_texture", &storage->vox.color);
-		program.setUniform("u_shadow", &storage->vox.shadow);
-		program.setUniform("u_proj", proj.proj.data(), 16);
-		
-		cube.draw(&proj, &storage->cam, model, &program);
+		Camera *cam = dynamic_cast<Camera*>(storage->getObject(cam_id));
+		if(cam != nullptr) {
+			for(Object *obj : *storage) {
+				VoxelObject *vobj = dynamic_cast<VoxelObject*>(obj);
+				if(vobj != nullptr) {
+					program.setUniform("u_size", vobj->map.size.data(), 3);
+					program.setUniform("u_texture", &vobj->map.color);
+					program.setUniform("u_shadow", &vobj->map.shadow);
+					program.setUniform("u_proj", proj.proj.data(), 16);
+					cube.draw(&proj, cam, vobj->model, &program);
+				}
+			}
+		}
 		
 		glFlush();
 	}

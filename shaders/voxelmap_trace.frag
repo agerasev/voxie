@@ -13,6 +13,8 @@ uniform mat4 u_inv_tex;
 uniform mat4 u_inv_model;
 uniform mat4 u_inv_view;
 
+uniform ivec2 u_lod;
+
 in vec4 v_tex_pos;
 in vec4 v_tex_norm;
 in vec4 v_tex_dir;
@@ -54,10 +56,10 @@ void main() {
 		}
 		
 		// get color and break if opaque enough
-		color.a = texelFetch(u_texture, ivec3(floor(cp)), 0).a;
+		color.a = texelFetch(u_texture, ivec3(floor(cp)), u_lod[0]).a;
 		if(color.a > 0.1) {
-			color.rgb = texture(u_texture, cp/size).rgb;
-			shadow = dot(texture(u_shadow, (sp + vec3(0.5))/(size + vec3(1))).rgb, abs(n));
+			color.rgb = textureLod(u_texture, cp/size, u_lod[0]).rgb;
+			shadow = dot(textureLod(u_shadow, (sp + vec3(0.5))/(size + vec3(1)), u_lod[0]).rgb, abs(n));
 			// light
 			float diff = max(0.0, -dot(normalize(u_view*u_model*u_inv_tex*vec4(n, 0.0)), normalize(vec4((u_view*u_model*u_inv_tex*vec4(sp/size, 1.0)).xyz, 0.0))));
 			color.rgb *= diff;

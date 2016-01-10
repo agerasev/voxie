@@ -5,10 +5,10 @@ private:
 	Engine &engine;
 	Graphics *gfx;
 	Camera &cam;
-	VoxelMap &vox;
+	VoxelObject &vobj;
 	
 public:
-	VoxelEditor(Engine &e) : engine(e), gfx(e.getGraphics()), cam(e.getStorage()->cam), vox(e.getStorage()->vox) {
+	VoxelEditor(Engine &e, Camera &c, VoxelObject &v) : engine(e), gfx(e.getGraphics()), cam(c), vobj(v) {
 		
 	}
 
@@ -28,6 +28,7 @@ public:
 	}
 	
 	void add(int mx, int my) {
+		VoxelMap &vox = vobj.map;
 		ivec3 under, over;
 		if(intersect(mx, my, under, over)) {
 			ivec3 bs = vox.size;
@@ -40,6 +41,7 @@ public:
 	}
 	
 	void remove(int mx, int my) {
+		VoxelMap &vox = vobj.map;
 		ivec3 under, over;
 		if(intersect(mx, my, under, over)) {
 			ivec3 bs = vox.size;
@@ -53,6 +55,7 @@ public:
 	
 	ivec3 prev = fvec3(-1,-1,-1);
 	void highlight(int mx, int my) {
+		VoxelMap &vox = vobj.map;
 		ivec3 next = fvec3(-1,-1,-1);
 		ivec3 under, over;
 		if(intersect(mx, my, under, over)) {
@@ -79,10 +82,11 @@ public:
 	}
 	
 	bool intersect(int mx, int my, ivec3 &under, ivec3 &over) {
+		VoxelMap &vox = vobj.map;
 		int width = gfx->width, height = gfx->height;
 		Projector proj = gfx->proj;
-		fmat4 view =cam.view;
-		fmat4 model = gfx->model;
+		fmat4 view = cam.view;
+		fmat4 model = vobj.model;
 		
 		fvec2 mv(2*(float)mx/width - 1, 1 - 2*(float)my/height);
 		fvec4 view_pos(mv[0]*proj.w, mv[1]*proj.h, -proj.n, 1.0);
@@ -168,7 +172,17 @@ int main(int argc, char *argv[]) {
 	
 	Engine engine;
 	
-	VoxelMap &vox = engine.getStorage()->vox;
+	Camera *cam = new Camera();
+	cam->id = 1;
+	engine.getStorage()->insertObject(cam);
+	
+	VoxelObject *vobj = new VoxelObject();
+	vobj->id = 2;
+	VoxelMap &vox = vobj->map;
+	engine.getStorage()->insertObject(vobj);
+	
+	engine.getGraphics()->setCamera(1);
+	engine.getInput()->setCamera(1);
 	
 	if(argc >= 2 && !vox.fileLoad(argv[1], true)) {
 		
@@ -188,12 +202,16 @@ int main(int argc, char *argv[]) {
 		vox.init(size, data.data(), true);
 	}
 	
-	VoxelEditor editor(engine);
+	VoxelEditor editor(engine, *cam, *vobj);
 	engine.getInput()->setMouseListener(&editor);
 	engine.loop();
 	
 	if(argc >= 2) {
 		vox.fileSave(argv[1]);
+	}
+	
+	for(Object *obj : *engine.getStorage()) {
+		delete obj;
 	}
 	
 	return 0;

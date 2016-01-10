@@ -4,8 +4,9 @@
 #include <gl/program.hpp>
 
 #include "projector.hpp"
-#include "camera.hpp"
 #include "voxelmap.hpp"
+
+#include <vox/objects/camera.hpp>
 
 #define sizeof_array(x) (sizeof(x)/sizeof((x)[0]))
 
@@ -133,6 +134,7 @@ public:
 		);
 		prog->setUniform("u_view", cam->view.data(), 16);
 		prog->setUniform("u_inv_view", invert(cam->view).data(), 16);
+		prog->setUniform("u_lod", ivec2(0,0).data(), 2);
 		
 		// draw cube
 		prog->setAttribute("a_vertex", &cube_vertex_buffer);
