@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
 	std::vector<ubyte> data;
 	data.resize(4*vs[0]*vs[1]*vs[2]);
 	
-	const int sx = 4, sy = 4;
+	const int sx = 2, sy = 2;
 	for(int iy = 0; iy < sy; ++iy) {
 		for(int ix = 0; ix < sx; ++ix) {
 			VoxelObject *vobj = new VoxelObject;

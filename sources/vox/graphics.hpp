@@ -9,7 +9,7 @@
 #include <GL/glew.h>
 
 #include <gl/program.hpp>
-#include <gl/framebuffer.hpp>
+#include <gl/light.hpp>
 
 #include <la/mat.hpp>
 
@@ -73,6 +73,10 @@ public:
 	
 	void render() {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		
+		Light light;
+		light.setPosition(fvec4(0,0.5,0.5*sqrt(3),0).data());
+		light.apply(0);
 		
 		Camera *cam = dynamic_cast<Camera*>(storage->getObject(cam_id));
 		std::vector<std::pair<double,VoxelObject*>> vector;

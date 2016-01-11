@@ -66,11 +66,20 @@ void main() {
 		if(color.a > 0.1) {
 			color.rgb = textureLod(u_texture, cp/size, u_lod[0]).rgb;
 			shadow = dot(textureLod(u_shadow, (sp + vec3(0.5))/(size + vec3(1)), u_lod[0]).rgb, abs(n));
+			
 			// light
-			float diff = max(0.0, -dot(normalize(u_view*u_model*u_inv_tex*vec4(n, 0.0)), normalize(vec4((u_view*u_model*u_inv_tex*vec4(sp/size, 1.0)).xyz, 0.0))));
+			vec3 w_pos = (u_model*u_inv_tex*vec4(sp/size, 1.0)).xyz;
+			vec3 w_norm = normalize((u_model*u_inv_tex*vec4(n, 0.0)).xyz);
+			vec4 light_pos = gl_LightSource[0].position;
+			vec3 light_dir = normalize(light_pos.xyz - w_pos*light_pos.w);
+			float diff = max(dot(w_norm, light_dir), 0.0);
 			color.rgb *= diff;
-			if(diff > 0.0)
-				color.rgb += vec3(pow(diff, 64.0));
+			//if(diff > 0.0) {
+				vec3 v_pos = (u_inv_view*vec4(0,0,0,1)).xyz;
+				vec3 v_dir = normalize(w_pos - v_pos);
+				vec3 r_dir = v_dir - 2.0*dot(v_dir, w_norm)*w_norm;
+				color.rgb += vec3(pow(max(dot(r_dir, light_dir), 0.0), 64.0));
+			//}
 			break;
 		}
 		
@@ -110,18 +119,3 @@ void main() {
 	gl_FragDepth = depth;
 	out_FragColor = vec4(color.rgb*shadow, color.a);
 }
-
-
-/*
-float step = 0.01;
-float factor = step*dot(abs(dir), vec3(u_tex_size));
-while(pos.x >= 0.0 && pos.x <= 1.0 && pos.y >= 0.0 && pos.y <= 1.0 && pos.z >= 0.0 && pos.z <= 1.0) {
-	vec4 new_color = texture3D(u_texture, pos);
-	new_color.a *= factor;
-	color += vec4(new_color.rgb*(1.0 - color.a)*new_color.a, (1.0 - color.a)*new_color.a);
-	if(color.a > 1.0 - 1e-4)
-		break;
-	pos += step*dir;
-}
-gl_FragColor = vec4(color.rgb/color.a, color.a);
-*/

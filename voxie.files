@@ -37,3 +37,4 @@ sources/vox/objects/id.hpp
 sources/vox/objects/object.hpp
 sources/vox/objects/camera.hpp
 sources/vox/objects/voxelobject.hpp
+submodules/libgl4u/gl/light.hpp
