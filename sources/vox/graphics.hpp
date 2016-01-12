@@ -91,10 +91,9 @@ public:
 			std::sort(vector.data(), vector.data() + vector.size(), cmp_pairs<double,VoxelObject*>);
 			for(auto p : vector) {
 				VoxelObject *vobj = p.second;
-				ivec3 size = vobj->map.size;
-				program.setUniform("u_size", size.data(), 3);
-				program.setUniform("u_offset", ivec3(0,0,0).data(), 3);
-				program.setUniform("u_true_size", size.data(), 3);
+				program.setUniform("u_size", vobj->map.size.data(), 3);
+				program.setUniform("u_offset", vobj->map.offset.data(), 3);
+				program.setUniform("u_real_size", vobj->map.real_size.data(), 3);
 				program.setUniform("u_texture", &vobj->map.texture);
 				program.setUniform("u_light", &vobj->map.light);
 				program.setUniform("u_proj", proj.proj.data(), 16);

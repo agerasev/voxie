@@ -4,7 +4,7 @@ uniform sampler3D u_texture;
 uniform sampler3D u_light;
 uniform ivec3 u_size;
 uniform ivec3 u_offset;
-uniform ivec3 u_true_size;
+uniform ivec3 u_real_size;
 
 uniform mat4 u_tex;
 uniform mat4 u_model;
@@ -24,10 +24,18 @@ in float v_z_value;
 
 out vec4 out_FragColor;
 
+const float BORDER_DELTA = 1e-3;
+
 bool is_outside(vec3 p, vec3 d, vec3 size) {
-	vec3 eps = 1e-3*size;
+	vec3 eps = BORDER_DELTA*size;
 	bvec3 lb = greaterThan(-eps, p);
-	bvec3 hb = greaterThan(p, size + eps);
+	bvec3 hb = greaterThanEqual(p, size + eps);
+	return lb.x || lb.y || lb.z || hb.x || hb.y || hb.z;
+}
+
+bool is_outside_int(ivec3 p, ivec3 size) {
+	bvec3 lb = greaterThan(ivec3(0), p);
+	bvec3 hb = greaterThanEqual(p, size);
 	return lb.x || lb.y || lb.z || hb.x || hb.y || hb.z;
 }
 
@@ -46,9 +54,8 @@ float get_occlusion(vec3 p, ivec3 n) {
 	vec3 c = fract(p) - vec3(0.5);
 	float x = dot(c, vec3(bx));
 	float y = dot(c, vec3(by));
-	float s = 0.0;
+	float s = 1.0;
 	if(!is_solid(bp)) {
-		s += 1.0;
 		s += (0.5 + x)*float(!is_solid(bp + bx));
 		s += (0.5 + y)*float(!is_solid(bp + by));
 		s += (0.5 - x)*float(!is_solid(bp - bx));
@@ -65,18 +72,19 @@ void main() {
 	vec4 color = vec4(0.0);
 	float shadow = 1.0;
 	float depth = 1.0;
+	vec4 norm = v_tex_norm;
 	vec4 pos = v_tex_pos;
 	vec4 dir = v_tex_dir;
-	vec4 norm = v_tex_norm;
 	
 	vec3 size = vec3(u_size);
-	vec3 d = dir.xyz*size;
-	vec3 p = pos.xyz*size;
 	vec3 n = norm.xyz;
+	vec3 d = dir.xyz*size;
+	vec3 p = pos.xyz*size - 0.5*BORDER_DELTA*normalize(dir.xyz)*size;
 	ivec3 id = ivec3(sign(d));
 	ivec3 ip = ivec3(ceil(p))*ivec3(greaterThan(id,ivec3(0,0,0))) + ivec3(floor(p))*ivec3(greaterThan(ivec3(0,0,0),id));
 	
 	vec3 sp = p, cp = p;
+	ivec3 cip = ivec3(floor(cp));
 	
 	depth = gl_FragCoord.z;
 	//depth = get_depth(v_z_value);
@@ -88,18 +96,6 @@ void main() {
 	
 	int i;
 	for(i = 0; i < u_size[0] + u_size[1] + u_size[2] + 3; ++i) {
-		// break if point is outside
-		if(is_outside(sp,d,size)) {
-			found = false;
-			break;
-		}
-		
-		// break if opaque enough
-		if(is_solid(ivec3(floor(cp)))) {
-			found = true;
-			break;
-		}
-		
 		vec3 ts;
 		// choose next intersection plane
 		ts = (vec3(ip) - p)/d;
@@ -125,13 +121,26 @@ void main() {
 		dp = vec3(dip);
 		sp = p + d*t;
 		cp = sp + 0.5*dp;
+		cip = ivec3(floor(cp));
 		
 		// increment intersection iterator
 		ip += dip;
+		
+		// break if point is outside
+		if(is_outside(sp,d,size)) {
+			found = false;
+			break;
+		}
+		
+		// break if opaque enough
+		if(is_solid(cip) && !is_outside_int(cip, u_size)) {
+			found = true;
+			break;
+		}
 	}
 	
 	if(found) {
-		color = vec4(textureLod(u_texture, (cp + vec3(u_offset))/vec3(u_true_size), u_lod[0]).rgb, 1.0);
+		color = vec4(textureLod(u_texture, (cp + vec3(u_offset))/vec3(u_real_size), u_lod[0]).rgb, 1.0);
 		shadow = get_occlusion(cp, -dip);
 		
 		// depth and normal
