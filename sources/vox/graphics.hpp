@@ -75,7 +75,7 @@ public:
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
 		Light light;
-		light.setPosition(fvec4(0,0.5,0.5*sqrt(3),0).data());
+		light.setPosition(fvec4(0,-0.5,0.5*sqrt(3),0).data());
 		light.apply(0);
 		
 		Camera *cam = dynamic_cast<Camera*>(storage->getObject(cam_id));
@@ -91,9 +91,12 @@ public:
 			std::sort(vector.data(), vector.data() + vector.size(), cmp_pairs<double,VoxelObject*>);
 			for(auto p : vector) {
 				VoxelObject *vobj = p.second;
-				program.setUniform("u_size", vobj->map.size.data(), 3);
-				program.setUniform("u_texture", &vobj->map.color);
-				program.setUniform("u_shadow", &vobj->map.shadow);
+				ivec3 size = vobj->map.size;
+				program.setUniform("u_size", size.data(), 3);
+				program.setUniform("u_offset", ivec3(0,0,0).data(), 3);
+				program.setUniform("u_true_size", size.data(), 3);
+				program.setUniform("u_texture", &vobj->map.texture);
+				program.setUniform("u_light", &vobj->map.light);
 				program.setUniform("u_proj", proj.proj.data(), 16);
 				cube.draw(&proj, cam, vobj->model, &program);
 			}
