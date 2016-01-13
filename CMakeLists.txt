@@ -7,8 +7,12 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -Wall")
 set(SOURCES "")
 
 include_directories(submodules/libla)
-include_directories(submodules/libgl4u)
 include_directories(sources)
+
+add_subdirectory(submodules/libgl4u)
+include_directories(submodules/libgl4u/includes)
+
+set(LOCAL_LIBS gl4u)
 
 if(${WIN32})
 	include_directories(${SDL2_INCLUDE_DIR})
@@ -21,9 +25,9 @@ add_executable(editor sources/editor_main.cpp ${SOURCES})
 add_executable(terrain sources/terrain_main.cpp ${SOURCES})
 
 if(${WIN32})
-	set(LIBS mingw32 SDL2main SDL2 opengl32 glew32)
+	set(LIBS ${LOCAL_LIBS} mingw32 SDL2main SDL2 opengl32 glew32)
 else()
-	set(LIBS SDL2 GL GLEW)
+	set(LIBS ${LOCAL_LIBS} SDL2 GL GLEW)
 endif()
 
 target_link_libraries(editor ${LIBS})

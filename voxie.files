@@ -1,13 +1,15 @@
-submodules/libgl4u/gl/exception.hpp
-submodules/libgl4u/gl/filereader.hpp
-submodules/libgl4u/gl/framebuffer.hpp
-submodules/libgl4u/gl/program.hpp
-submodules/libgl4u/gl/shader.hpp
-submodules/libgl4u/gl/texture.hpp
-submodules/libgl4u/gl/type.hpp
-submodules/libgl4u/gl/vertexbuffer.hpp
 submodules/libla/la/mat.hpp
 submodules/libla/la/vec.hpp
+
+submodules/libgl4u/includes/gl/exception.hpp
+submodules/libgl4u/includes/gl/filereader.hpp
+submodules/libgl4u/includes/gl/framebuffer.hpp
+submodules/libgl4u/includes/gl/program.hpp
+submodules/libgl4u/includes/gl/shader.hpp
+submodules/libgl4u/includes/gl/texture.hpp
+submodules/libgl4u/includes/gl/type.hpp
+submodules/libgl4u/includes/gl/vertexbuffer.hpp
+submodules/libgl4u/CMakeLists.txt
 
 CMakeLists.txt
 
@@ -37,3 +39,10 @@ sources/vox/objects/id.hpp
 sources/vox/objects/object.hpp
 sources/vox/objects/camera.hpp
 sources/vox/objects/voxelobject.hpp
+submodules/libgl4u/sources/shader.cpp
+submodules/libgl4u/sources/filereader.cpp
+submodules/libgl4u/sources/exception.cpp
+submodules/libgl4u/sources/vertexbuffer.cpp
+submodules/libgl4u/sources/texture.cpp
+submodules/libgl4u/sources/framebuffer.cpp
+submodules/libgl4u/sources/program.cpp
