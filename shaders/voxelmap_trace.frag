@@ -1,7 +1,7 @@
 #version 130
 
 uniform sampler3D u_texture;
-uniform sampler3D u_light;
+uniform sampler3D u_light_texture;
 uniform ivec3 u_size;
 uniform ivec3 u_offset;
 uniform ivec3 u_real_size;
@@ -16,6 +16,10 @@ uniform mat4 u_inv_model;
 uniform mat4 u_inv_view;
 
 uniform ivec2 u_lod;
+
+uniform vec4 u_ambient;
+uniform vec4 u_light_pos;
+uniform vec4 u_light_color;
 
 in vec4 v_tex_pos;
 in vec4 v_tex_norm;
@@ -150,11 +154,12 @@ void main() {
 		// light
 		vec3 w_pos = (u_model*u_inv_tex*vec4(sp/size, 1.0)).xyz;
 		vec3 w_norm = normalize((u_model*u_inv_tex*vec4(n, 0.0)).xyz);
-		vec4 light_pos = gl_LightSource[0].position;
+		vec4 light_pos = u_light_pos;
 		vec3 light_dir = normalize(light_pos.xyz - w_pos*light_pos.w);
-		vec3 dif = max(dot(w_norm, light_dir), 0.0)*gl_LightSource[0].diffuse.rgb;
-		vec3 amb = gl_LightSource[0].ambient.rgb;
-		color.rgb *= dif;
+		vec3 dif = max(dot(w_norm, light_dir), 0.0)*u_light_color.rgb;
+		vec3 amb = u_ambient.rgb;
+		vec3 new_color = amb*color.rgb*shadow + dif*color.rgb; 
+		color.rgb = new_color.rgb;
 		// specular
 		vec3 v_pos = (u_inv_view*vec4(0,0,0,1)).xyz;
 		vec3 v_dir = normalize(w_pos - v_pos);
@@ -165,5 +170,5 @@ void main() {
 	}
 	
 	gl_FragDepth = depth;
-	out_FragColor = vec4(color.rgb*shadow, color.a);
+	out_FragColor = vec4(color);
 }

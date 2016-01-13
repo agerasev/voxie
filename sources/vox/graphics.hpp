@@ -9,7 +9,6 @@
 #include <GL/glew.h>
 
 #include <gl/program.hpp>
-#include <gl/light.hpp>
 
 #include <la/mat.hpp>
 
@@ -52,7 +51,7 @@ public:
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		glEnable(GL_BLEND);
 		glEnable(GL_CULL_FACE);
-		glClearColor(0.2f,0.2f,0.2f,1.0f);
+		glClearColor(0.2f,0.6f,1.0f,1.0f);
 	}
 	
 	void setCamera(ID id) {
@@ -74,10 +73,6 @@ public:
 	void render() {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		
-		Light light;
-		light.setPosition(fvec4(0,-0.5,0.5*sqrt(3),0).data());
-		light.apply(0);
-		
 		Camera *cam = dynamic_cast<Camera*>(storage->getObject(cam_id));
 		std::vector<std::pair<double,VoxelObject*>> vector;
 		if(cam != nullptr) {
@@ -95,8 +90,14 @@ public:
 				program.setUniform("u_offset", vobj->map.offset.data(), 3);
 				program.setUniform("u_real_size", vobj->map.real_size.data(), 3);
 				program.setUniform("u_texture", &vobj->map.texture);
-				program.setUniform("u_light", &vobj->map.light);
+				program.setUniform("u_light_texture", &vobj->map.light);
+				
+				program.setUniform("u_ambient", fvec4(0.1,0.3,0.5,1).data(), 4);
+				program.setUniform("u_light_pos", fvec4(0,0.5,0.5*sqrt(3),0).data(), 4);
+				program.setUniform("u_light_color", fvec4(0.9,0.7,0.5,1).data(), 4);
+				
 				program.setUniform("u_proj", proj.proj.data(), 16);
+				
 				cube.draw(&proj, cam, vobj->model, &program);
 			}
 		}
