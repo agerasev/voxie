@@ -14,7 +14,7 @@ int main(int argc, char *argv[]) {
 	Engine engine;
 	
 	const ivec3 vs(64,64,16);
-	const ivec3 rvs = vs + ivec3(2,2,2);
+	const ivec3 rvs = vs;// + ivec3(2,2,2);
 	std::vector<ubyte> data;
 	data.resize(4*rvs[0]*rvs[1]*rvs[2]);
 	
@@ -41,7 +41,8 @@ int main(int argc, char *argv[]) {
 				data[i + 2] = 0x20;
 				data[i + 3] = ((ivz - 1) < (0.5 + 0.5*sin(px + py)*sin(px - py))*vs.z()) ? 0xFF : 0x00;
 			}
-			vobj->map.init(rvs, data.data());
+			vobj->map.init(rvs, data.data(), true);
+			vobj->map.genMipMap(4);
 			engine.getStorage()->insertObject(vobj);
 		}
 	}

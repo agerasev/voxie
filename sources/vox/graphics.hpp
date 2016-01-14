@@ -91,7 +91,7 @@ public:
 				program.setUniform("u_offset", vobj->map.offset.data(), 3);
 				program.setUniform("u_real_size", vobj->map.real_size.data(), 3);
 				program.setUniform("u_texture", &vobj->map.texture);
-				program.setUniform("u_light_texture", &vobj->map.light);
+				// program.setUniform("u_light_texture", &vobj->map.light);
 				
 				program.setUniform("u_ambient", fvec4(0.1,0.3,0.5,1).data(), 4);
 				program.setUniform("u_light_pos", fvec4(0,0.5,0.5*sqrt(3),0).data(), 4);
@@ -99,7 +99,46 @@ public:
 				
 				program.setUniform("u_proj", proj.proj.data(), 16);
 				
-				cube.draw(&proj, cam, vobj->model, &program);
+				fmat4 model = vobj->model;
+				static const fmat4 vert_to_tex(
+				1, 0, 0, 0.5, 
+				0, 1, 0, 0.5, 
+				0, 0, 1, 0.5, 
+				0, 0, 0, 1
+				);
+				program.setUniform("u_view", cam->view.data(), 16);
+				program.setUniform("u_inv_view", invert(cam->view).data(), 16);
+				program.setUniform("u_lod", ivec2(0,4).data(), 2);
+				
+				// draw cube
+				program.setAttribute("a_vertex", &cube.cube_vertex_buffer);
+				program.setAttribute("a_normal", &cube.cube_normal_buffer);
+				program.setUniform("u_model", model.data(), 16);
+				program.setUniform("u_inv_model", invert(model).data(), 16);
+				program.setUniform("u_tex", vert_to_tex.data(), 16);
+				program.setUniform("u_inv_tex", invert(vert_to_tex).data(), 16);
+				program.evaluate();
+				
+				//draw clipping quad
+				fmat4 imv = invert(cam->view*model);
+				if(sqrt(abs2(imv*fvec4(0,0,0,1)) - 1) <= 0.5*sqrt(3) + proj.n) {
+					float epsm = (1.0 + 1e-3);
+					fmat4 move = fmat4(
+					2*proj.w*epsm, 0, 0, 0,
+					0, 2*proj.h*epsm, 0, 0,
+					0, 0, 1, -proj.n*epsm,
+					0, 0, 0, 1
+					);
+					program.setAttribute("a_vertex", &cube.quad_vertex_buffer);
+					program.setAttribute("a_normal", &cube.quad_normal_buffer);
+					fmat4 mmodel = model*imv*move;
+					program.setUniform("u_model", mmodel.data(), 16);
+					program.setUniform("u_inv_model", invert(mmodel).data(), 16);
+					fmat4 mtex = vert_to_tex*imv*move;
+					program.setUniform("u_tex", mtex.data(), 16);
+					program.setUniform("u_inv_tex", invert(mtex).data(), 16);
+					program.evaluate();
+				}
 			}
 		}
 		

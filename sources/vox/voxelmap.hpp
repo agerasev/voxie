@@ -12,9 +12,20 @@ public:
 	gl::Texture texture;
 	gl::Texture light;
 	
-	std::vector<unsigned char> data;
-	ivec3 size, offset;
-	ivec3 real_size;
+	std::vector<std::vector<unsigned char>> data_vector;
+	std::vector<unsigned char> &data;
+	ivec3 size = nullivec3, offset = nullivec3;
+	ivec3 real_size = nullivec3;
+	
+	bool host = false;
+	
+	VoxelMap() 
+	  : data_vector(1), data(data_vector[0])
+	{
+		
+	}
+	
+	~VoxelMap() = default;
 	
 private:
 	static int is_solid(const unsigned char *c, ivec3 s, int x, int y, int z) {
@@ -32,17 +43,64 @@ private:
 public:
 	void init(ivec3 real_size, const unsigned char *data = nullptr, bool host = false) {
 		this->real_size = real_size;
-		size = real_size - ivec3(2,2,2);
-		offset = ivec3(1,1,1);
-		texture.loadData(3, data, real_size.data(), gl::Texture::RGBA8, gl::Texture::RGBA, gl::Texture::UBYTE, gl::Texture::NEAREST);
+		size = real_size;
+		offset = nullivec3;
+		texture.init(3, real_size.data(), gl::Texture::RGBA8);
+		texture.write(data, nullivec3.data(), real_size.data(), gl::Texture::RGBA, gl::Texture::UBYTE);
+		texture.setInterpolation(gl::Texture::NEAREST);
+		this->host = host;
 		if(host && data != nullptr) {
 			this->data.resize(dataSize());
 			memcpy(this->data.data(), data, this->data.size());
 		}
 	}
 	
-	void write(const unsigned char *data, ivec3 offset, ivec3 sub_size) {
-		texture.loadSubData(data, offset.data(), sub_size.data(), gl::Texture::RGBA, gl::Texture::UBYTE);
+	void write(const unsigned char *data, ivec3 offset, ivec3 size) {
+		texture.write(data, offset.data(), size.data(), gl::Texture::RGBA, gl::Texture::UBYTE);
+		// TODO: update host data respectively
+	}
+	
+	static long get_index(ivec3 p, ivec3 s) {
+		return s.x()*(s.y()*p.z() + p.y()) + p.x();
+	}
+	
+	void genMipMap(int mlvl) {
+		if(host) {
+			data_vector.resize(mlvl + 1);
+			ivec3 prev_mmsize = size;
+			for(int i = 1; i <= mlvl; ++i) {
+				ivec3 mmsize = (size - ivec3(1,1,1))/(1<<i) + ivec3(1,1,1);
+				const std::vector<unsigned char> &prev_mmdata = data_vector[i - 1];
+				std::vector<unsigned char> &mmdata = data_vector[i];
+				mmdata.resize(4*mmsize[0]*mmsize[1]*mmsize[2]);
+				for(int iz = 0; iz < mmsize.z(); ++iz)
+				for(int iy = 0; iy < mmsize.y(); ++iy)
+				for(int ix = 0; ix < mmsize.x(); ++ix) 
+				{
+					unsigned int new_val[4] = {0,0,0,0};
+					for(int j = 0; j < 8; ++j) {
+						int idx = 4*get_index(ivec3(2*ix + ((j>>0)&1), 2*iy + ((j>>1)&1), 2*iz + ((j>>2)&1)), prev_mmsize);
+						unsigned char val[4];
+						for(int k = 0; k < 4; ++k)
+							val[k] = prev_mmdata[idx + k];
+						for(int k = 0; k < 3; ++k)
+							new_val[k] += val[k];
+						if(val[3] > new_val[3])
+							new_val[3] = val[3];
+					}
+					for(int k = 0; k < 3; ++k)
+						new_val[k] /= 8;
+					int idx = 4*get_index(ivec3(ix,iy,iz), mmsize);
+					for(int k = 0; k < 4; ++k)
+						mmdata[idx + k] = new_val[k];
+				}
+				texture.init(3,mmsize.data(),gl::Texture::RGBA8,i);
+				texture.write(mmdata.data(),nullivec3.data(),mmsize.data(),gl::Texture::RGBA,gl::Texture::UBYTE,i);
+				prev_mmsize = mmsize;
+			}
+		} else {
+			fprintf(stderr, "cannot generate mipmap for texture %d without host data\n", texture.id());
+		}
 	}
 	
 	int fileLoad(const std::string &fn, bool host = false) {
@@ -61,6 +119,7 @@ public:
 					data.resize(dataSize());
 					fread(data.data(), data.size(), 1, file);
 					init(real_size, data.data());
+					this->host = true;
 				} else {
 					real_size = ivec3(0,0,0);
 					status = 3;

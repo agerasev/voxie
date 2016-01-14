@@ -1,7 +1,7 @@
 #version 130
 
 uniform sampler3D u_texture;
-uniform sampler3D u_light_texture;
+// uniform sampler3D u_light_texture;
 uniform ivec3 u_size;
 uniform ivec3 u_offset;
 uniform ivec3 u_real_size;
@@ -43,12 +43,24 @@ bool is_outside_int(ivec3 p, ivec3 size) {
 	return lb.x || lb.y || lb.z || hb.x || hb.y || hb.z;
 }
 
+ivec3 get_size_lod(ivec3 size, int lod) {
+	return (size - ivec3(1))/(1<<lod) + ivec3(1);
+}
+
 float get_depth(float z) {
 	return 0.5 - 0.5*(u_proj[2][2] + u_proj[3][2]/z);
 }
 
+vec4 sample_int(ivec3 p, int lod) {
+	return texelFetch(u_texture, p + u_offset, lod);
+}
+
+vec4 sample_float(vec3 p, int lod) {
+	 return textureLod(u_texture, (p + vec3(u_offset))/vec3(u_real_size), lod);
+}
+
 bool is_solid(ivec3 p) {
-	return texelFetch(u_texture, p + u_offset, u_lod[0]).a > 0.1;
+	return sample_int(p, u_lod[0]).a > 0.1;
 }
 
 float get_occlusion(vec3 p, ivec3 n) {
@@ -80,7 +92,8 @@ void main() {
 	vec4 pos = v_tex_pos;
 	vec4 dir = v_tex_dir;
 	
-	vec3 size = vec3(u_size);
+	ivec3 lod_size = get_size_lod(u_size, u_lod[0]);
+	vec3 size = vec3(lod_size);
 	vec3 n = norm.xyz;
 	vec3 d = dir.xyz*size;
 	vec3 p = pos.xyz*size - 0.5*BORDER_DELTA*normalize(dir.xyz)*size;
@@ -99,7 +112,7 @@ void main() {
 	bool found = false;
 	
 	int i;
-	for(i = 0; i < u_size[0] + u_size[1] + u_size[2] + 3; ++i) {
+	for(i = 0; i < lod_size[0] + lod_size[1] + lod_size[2] + 3; ++i) {
 		vec3 ts;
 		// choose next intersection plane
 		ts = (vec3(ip) - p)/d;
@@ -137,14 +150,14 @@ void main() {
 		}
 		
 		// break if opaque enough
-		if(is_solid(cip) && !is_outside_int(cip, u_size)) {
+		if(is_solid(cip) && !is_outside_int(cip, lod_size)) {
 			found = true;
 			break;
 		}
 	}
 	
 	if(found) {
-		color = vec4(textureLod(u_texture, (cp + vec3(u_offset))/vec3(u_real_size), u_lod[0]).rgb, 1.0);
+		color = vec4(sample_float(cp, u_lod[0]).rgb, 1.0);
 		shadow = get_occlusion(cp, -dip);
 		
 		// depth and normal
@@ -158,13 +171,13 @@ void main() {
 		vec3 light_dir = normalize(light_pos.xyz - w_pos*light_pos.w);
 		vec3 dif = max(dot(w_norm, light_dir), 0.0)*u_light_color.rgb;
 		vec3 amb = u_ambient.rgb;
-		vec3 new_color = amb*color.rgb*shadow + dif*color.rgb; 
+		vec3 new_color = amb*color.rgb*shadow + dif*color.rgb*shadow; 
 		color.rgb = new_color.rgb;
 		// specular
 		vec3 v_pos = (u_inv_view*vec4(0,0,0,1)).xyz;
 		vec3 v_dir = normalize(w_pos - v_pos);
 		vec3 r_dir = v_dir - 2.0*dot(v_dir, w_norm)*w_norm;
-		color.rgb += vec3(pow(max(dot(r_dir, light_dir), 0.0), 64.0));
+		color.rgb += vec3(pow(max(dot(r_dir, light_dir), 0.0), 64.0))*shadow;
 	} else {
 		depth = 1.0;
 	}

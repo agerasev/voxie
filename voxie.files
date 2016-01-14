@@ -46,3 +46,4 @@ submodules/libgl4u/sources/vertexbuffer.cpp
 submodules/libgl4u/sources/texture.cpp
 submodules/libgl4u/sources/framebuffer.cpp
 submodules/libgl4u/sources/program.cpp
+sources/vox/cube.cpp
