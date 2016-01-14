@@ -28,9 +28,23 @@ in float v_z_value;
 
 out vec4 out_FragColor;
 
+const float GRID_DELTA = 1e-2;
+
+ivec3 get_size_lod(ivec3 size, int lod) {
+	return (size - ivec3(1))/(1<<lod) + ivec3(1);
+}
+
+vec3 tex_to_grid(vec3 tc, int lod) {
+	return tc*vec3(get_size_lod(u_size, lod));
+}
+
+vec3 grid_to_tex(vec3 gc, int lod) {
+	return gc/vec3(get_size_lod(u_size, lod));
+}
+
 const float BORDER_DELTA = 1e-3;
 
-bool is_outside(vec3 p, vec3 d, vec3 size) {
+bool is_outside_float(vec3 p, vec3 size) {
 	vec3 eps = BORDER_DELTA*size;
 	bvec3 lb = greaterThan(-eps, p);
 	bvec3 hb = greaterThanEqual(p, size + eps);
@@ -43,27 +57,22 @@ bool is_outside_int(ivec3 p, ivec3 size) {
 	return lb.x || lb.y || lb.z || hb.x || hb.y || hb.z;
 }
 
-ivec3 get_size_lod(ivec3 size, int lod) {
-	return (size - ivec3(1))/(1<<lod) + ivec3(1);
-}
-
 float get_depth(float z) {
 	return 0.5 - 0.5*(u_proj[2][2] + u_proj[3][2]/z);
 }
 
 vec4 sample_int(ivec3 p, int lod) {
-	return texelFetch(u_texture, p + u_offset, lod);
+	return texelFetch(u_texture, p, lod);
 }
-
 vec4 sample_float(vec3 p, int lod) {
-	 return textureLod(u_texture, (p + vec3(u_offset))/vec3(u_real_size), lod);
+	 return textureLod(u_texture, grid_to_tex(p, lod), lod);
 }
 
-bool is_solid(ivec3 p) {
-	return sample_int(p, u_lod[0]).a > 0.1;
+bool is_solid(ivec3 p, int lod) {
+	return sample_int(p, lod).a > 0.1;
 }
 
-float get_occlusion(vec3 p, ivec3 n) {
+float get_occlusion(vec3 p, ivec3 n, int lod) {
 	ivec3 bx = ivec3(n.x == 0, n.x != 0, 0);
 	ivec3 by = ivec3(0, n.z != 0, (n.x != 0) || (n.y != 0));
 	ivec3 bp = ivec3(floor(p)) + n;
@@ -71,49 +80,37 @@ float get_occlusion(vec3 p, ivec3 n) {
 	float x = dot(c, vec3(bx));
 	float y = dot(c, vec3(by));
 	float s = 1.0;
-	if(!is_solid(bp)) {
-		s += (0.5 + x)*float(!is_solid(bp + bx));
-		s += (0.5 + y)*float(!is_solid(bp + by));
-		s += (0.5 - x)*float(!is_solid(bp - bx));
-		s += (0.5 - y)*float(!is_solid(bp - by));
-		s += (0.5 + x)*(0.5 + y)*float(!is_solid(bp + bx + by));
-		s += (0.5 - x)*(0.5 + y)*float(!is_solid(bp - bx + by));
-		s += (0.5 - x)*(0.5 - y)*float(!is_solid(bp - bx - by));
-		s += (0.5 + x)*(0.5 - y)*float(!is_solid(bp + bx - by));
+	if(!is_solid(bp, lod)) {
+		s += (0.5 + x)*float(!is_solid(bp + bx, lod));
+		s += (0.5 + y)*float(!is_solid(bp + by, lod));
+		s += (0.5 - x)*float(!is_solid(bp - bx, lod));
+		s += (0.5 - y)*float(!is_solid(bp - by, lod));
+		s += (0.5 + x)*(0.5 + y)*float(!is_solid(bp + bx + by, lod));
+		s += (0.5 - x)*(0.5 + y)*float(!is_solid(bp - bx + by, lod));
+		s += (0.5 - x)*(0.5 - y)*float(!is_solid(bp - bx - by, lod));
+		s += (0.5 + x)*(0.5 - y)*float(!is_solid(bp + bx - by, lod));
 	}
 	return s/4.0;
 }
 
-void main() {
-	vec4 color = vec4(0.0);
-	float shadow = 1.0;
-	float depth = 1.0;
-	vec4 norm = v_tex_norm;
-	vec4 pos = v_tex_pos;
-	vec4 dir = v_tex_dir;
-	
-	ivec3 lod_size = get_size_lod(u_size, u_lod[0]);
-	vec3 size = vec3(lod_size);
-	vec3 n = norm.xyz;
-	vec3 d = dir.xyz*size;
-	vec3 p = pos.xyz*size - 0.5*BORDER_DELTA*normalize(dir.xyz)*size;
+bool trace(vec3 pos, vec3 dir, out float t, out ivec3 dip, out vec3 sp, int lod) {
+	ivec3 size = get_size_lod(u_size, lod);
+	vec3 d = tex_to_grid(dir, lod);
+	vec3 p = tex_to_grid(pos - 0.5*BORDER_DELTA*normalize(dir), lod);
 	ivec3 id = ivec3(sign(d));
 	ivec3 ip = ivec3(ceil(p))*ivec3(greaterThan(id,ivec3(0,0,0))) + ivec3(floor(p))*ivec3(greaterThan(ivec3(0,0,0),id));
 	
-	vec3 sp = p, cp = p;
-	ivec3 cip = ivec3(floor(cp));
+	sp = p;
+	vec3 cp = p;
+	ivec3 cip;
 	
-	depth = gl_FragCoord.z;
-	//depth = get_depth(v_z_value);
-	
-	ivec3 dip = ivec3(0);
-	vec3 dp = -n;
-	float t = 0.0;
-	bool found = false;
+	vec3 dp;
+	t = 0.0;
 	
 	int i;
-	for(i = 0; i < lod_size[0] + lod_size[1] + lod_size[2] + 3; ++i) {
+	for(i = 0; i < size[0] + size[1] + size[2] + 3; ++i) {
 		vec3 ts;
+		
 		// choose next intersection plane
 		ts = (vec3(ip) - p)/d;
 		if(ts.x < ts.y) {
@@ -143,29 +140,45 @@ void main() {
 		// increment intersection iterator
 		ip += dip;
 		
-		// break if point is outside
-		if(is_outside(sp,d,size)) {
-			found = false;
-			break;
+		// not found if point is outside
+		if(is_outside_float(sp, vec3(size))) {
+			return false;
 		}
 		
-		// break if opaque enough
-		if(is_solid(cip) && !is_outside_int(cip, lod_size)) {
-			found = true;
-			break;
+		// found if opaque enough
+		if(is_solid(cip, lod) && !is_outside_int(cip, size)) {
+			return true;
 		}
 	}
+}
+
+void main() {
+	vec4 color = vec4(0.0);
+	float shadow = 1.0;
+	float depth = 1.0;
+	vec3 norm = v_tex_norm.xyz;
+	vec3 pos = v_tex_pos.xyz;
+	vec3 dir = v_tex_dir.xyz;
+	
+	depth = gl_FragCoord.z;
+	//depth = get_depth(v_z_value);
+	
+	vec3 sp, cp;
+	ivec3 dip = ivec3(0);
+	float t = 0.0;
+	bool found = trace(pos, dir, t, dip, sp, u_lod[0]);
+	cp = sp + 0.5*vec3(dip);
 	
 	if(found) {
 		color = vec4(sample_float(cp, u_lod[0]).rgb, 1.0);
-		shadow = get_occlusion(cp, -dip);
+		shadow = get_occlusion(cp, -dip, u_lod[0]);
 		
 		// depth and normal
 		depth = get_depth(v_z_value*(1.0 + t));
-		n = -dp;
+		vec3 n = -vec3(dip);
 		
 		// light
-		vec3 w_pos = (u_model*u_inv_tex*vec4(sp/size, 1.0)).xyz;
+		vec3 w_pos = (u_model*u_inv_tex*vec4(grid_to_tex(sp, u_lod[0]), 1.0)).xyz;
 		vec3 w_norm = normalize((u_model*u_inv_tex*vec4(n, 0.0)).xyz);
 		vec4 light_pos = u_light_pos;
 		vec3 light_dir = normalize(light_pos.xyz - w_pos*light_pos.w);
@@ -173,6 +186,7 @@ void main() {
 		vec3 amb = u_ambient.rgb;
 		vec3 new_color = amb*color.rgb*shadow + dif*color.rgb*shadow; 
 		color.rgb = new_color.rgb;
+		
 		// specular
 		vec3 v_pos = (u_inv_view*vec4(0,0,0,1)).xyz;
 		vec3 v_dir = normalize(w_pos - v_pos);
