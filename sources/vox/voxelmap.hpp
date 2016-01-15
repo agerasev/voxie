@@ -47,7 +47,7 @@ public:
 		offset = nullivec3;
 		texture.init(3, real_size.data(), gl::Texture::RGBA8);
 		texture.write(data, nullivec3.data(), real_size.data(), gl::Texture::RGBA, gl::Texture::UBYTE);
-		texture.setInterpolation(gl::Texture::NEAREST);
+		texture.setInterpolation(gl::Texture::NEAREST_MIPMAP_NEAREST, gl::Texture::NEAREST);
 		this->host = host;
 		if(host && data != nullptr) {
 			this->data.resize(dataSize());

@@ -108,7 +108,7 @@ public:
 				);
 				program.setUniform("u_view", cam->view.data(), 16);
 				program.setUniform("u_inv_view", invert(cam->view).data(), 16);
-				program.setUniform("u_lod", ivec2(0,4).data(), 2);
+				program.setUniform("u_lod", ivec2(1,4).data(), 2);
 				
 				// draw cube
 				program.setAttribute("a_vertex", &cube.cube_vertex_buffer);
