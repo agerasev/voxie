@@ -14,8 +14,7 @@ public:
 	
 	std::vector<std::vector<unsigned char>> data_vector;
 	std::vector<unsigned char> &data;
-	ivec3 size = nullivec3, offset = nullivec3;
-	ivec3 real_size = nullivec3;
+	ivec3 size = nullivec3;
 	
 	bool host = false;
 	
@@ -41,12 +40,10 @@ private:
 	}
 	
 public:
-	void init(ivec3 real_size, const unsigned char *data = nullptr, bool host = false) {
-		this->real_size = real_size;
-		size = real_size;
-		offset = nullivec3;
-		texture.init(3, real_size.data(), gl::Texture::RGBA8);
-		texture.write(data, nullivec3.data(), real_size.data(), gl::Texture::RGBA, gl::Texture::UBYTE);
+	void init(ivec3 size, const unsigned char *data = nullptr, bool host = false) {
+		this->size = size;
+		texture.init(3, size.data(), gl::Texture::RGBA8);
+		texture.write(data, nullivec3.data(), size.data(), gl::Texture::RGBA, gl::Texture::UBYTE);
 		texture.setInterpolation(gl::Texture::NEAREST_MIPMAP_NEAREST, gl::Texture::NEAREST);
 		this->host = host;
 		if(host && data != nullptr) {
@@ -56,7 +53,7 @@ public:
 	}
 	
 	void write(const unsigned char *data, ivec3 offset, ivec3 size) {
-		texture.write(data, offset.data(), size.data(), gl::Texture::RGBA, gl::Texture::UBYTE);
+		texture.write(data, nullivec3.data(), size.data(), gl::Texture::RGBA, gl::Texture::UBYTE);
 		// TODO: update host data respectively
 	}
 	
@@ -114,14 +111,14 @@ public:
 			if(s >= 3) {
 				unsigned char d[4] = {0,0,0,0};
 				fread(d, 4, 1, file);
-				real_size = ivec3(int(d[0]) + 1, int(d[1]) + 1, int(d[2]) + 1);
+				size = ivec3(int(d[0]) + 1, int(d[1]) + 1, int(d[2]) + 1);
 				if(s >= 4 + dataSize()) {
 					data.resize(dataSize());
 					fread(data.data(), data.size(), 1, file);
-					init(real_size, data.data());
+					init(size, data.data());
 					this->host = true;
 				} else {
-					real_size = ivec3(0,0,0);
+					size = ivec3(0,0,0);
 					status = 3;
 				}
 			} else {
@@ -136,10 +133,10 @@ public:
 	
 	int fileSave(const std::string &fn) {
 		int status = 0;
-		if(4*real_size[0]*real_size[1]*real_size[2] <= int(data.size())) {
+		if(4*size[0]*size[1]*size[2] <= int(data.size())) {
 			FILE *file = fopen(fn.c_str(), "wb");
 			if(file != nullptr) {
-				unsigned char hdr[4] = {(unsigned char)(real_size[0] - 1), (unsigned char)(real_size[1] - 1), (unsigned char)(real_size[2] - 1), 0};
+				unsigned char hdr[4] = {(unsigned char)(size[0] - 1), (unsigned char)(size[1] - 1), (unsigned char)(size[2] - 1), 0};
 				fwrite(hdr, 4, 1, file);
 				fwrite(data.data(), data.size(), 1, file);
 				fclose(file);

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include <SDL2/SDL.h>
 #include <GL/glew.h>
 
@@ -34,6 +36,9 @@ public:
 	}
 	~Window() {
 		SDL_DestroyWindow(window);
+	}
+	void setTitle(const std::string &title) {
+		SDL_SetWindowTitle(window, title.c_str());
 	}
 };
 

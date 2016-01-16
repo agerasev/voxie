@@ -31,9 +31,18 @@ public:
 	}
 	
 	void loop() {
+		int frame_counter = 0;
+		Uint32 last_time = SDL_GetTicks();
 		while(input.handle()) {
 			graphics.render();
 			context.swap();
+			++frame_counter;
+			Uint32 time = SDL_GetTicks();
+			if(time - last_time > 1000) {
+				last_time = time;
+				window.setTitle("FPS: " + std::to_string(frame_counter));
+				frame_counter = 0;
+			}
 		}
 	}
 	

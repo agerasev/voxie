@@ -88,8 +88,6 @@ public:
 			for(auto p : vector) {
 				VoxelObject *vobj = p.second;
 				program.setUniform("u_size", vobj->map.size.data(), 3);
-				program.setUniform("u_offset", vobj->map.offset.data(), 3);
-				program.setUniform("u_real_size", vobj->map.real_size.data(), 3);
 				program.setUniform("u_texture", &vobj->map.texture);
 				// program.setUniform("u_light_texture", &vobj->map.light);
 				
@@ -108,7 +106,7 @@ public:
 				);
 				program.setUniform("u_view", cam->view.data(), 16);
 				program.setUniform("u_inv_view", invert(cam->view).data(), 16);
-				program.setUniform("u_lod", ivec2(1,4).data(), 2);
+				program.setUniform("u_lod", ivec2(0,4).data(), 2);
 				
 				// draw cube
 				program.setAttribute("a_vertex", &cube.cube_vertex_buffer);
