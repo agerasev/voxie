@@ -95,39 +95,6 @@ float get_occlusion(vec3 p, ivec3 ip, ivec3 n, int lod) {
 	return s/4.0;
 }
 
-bool project_on_box(inout vec3 pos, in vec3 dir, inout vec3 norm, inout float dist) {
-	if(!is_outside_float(pos, vec3(0), vec3(1)))
-		return true;
-	
-	bvec3 bs = lessThan(dir, vec3(0));
-	vec3 ts = (vec3(bs) - pos)/dir;
-	ivec3 id = 2*ivec3(bs) - ivec3(1);
-	ivec3 dip;
-	float t = -1.0;
-	
-	if(ts.x > 0 && (t < 0 || ts.x < t) && !is_outside_float(pos + dir*ts.x, vec3(0), vec3(1))) {
-		dip = ivec3(id.x, 0, 0);
-		t = ts.x;
-	}
-	if(ts.y > 0 && (t < 0 || ts.y < t) && !is_outside_float(pos + dir*ts.y, vec3(0), vec3(1))) {
-		dip = ivec3(0, id.y, 0);
-		t = ts.y;
-	}
-	if(ts.z > 0 && (t < 0 || ts.z < t) && !is_outside_float(pos + dir*ts.z, vec3(0), vec3(1))) {
-		dip = ivec3(0, 0, id.z);
-		t = ts.z;
-	}
-	if(t < 0)
-		return false;
-	
-	pos += dir*t;
-	if(is_outside_float(pos, vec3(0), vec3(1)))
-		return false;
-	norm = vec3(dip);
-	dist += t;
-	return true;
-}
-
 bool trace(inout vec3 pos, out ivec3 ipos, in vec3 dir, inout vec3 norm, inout ivec3 inorm, inout float dist, in int lod) {
 	ivec3 size = get_size_lod(u_size, lod);
 	vec3 d = uni_to_cell(dir, lod);
@@ -211,8 +178,7 @@ void main() {
 	int lod = u_lod[0];
 	float dist = 0.0;
 	
-	//if(is_outside_float(pos, vec3(0), vec3(1)))
-	if(!project_on_box(pos, dir, norm, dist))
+	if(is_outside_float(pos, vec3(0), vec3(1)))
 		discard;
 	
 	depth = gl_FragCoord.z;

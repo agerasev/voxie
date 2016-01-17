@@ -80,7 +80,7 @@ public:
 			for(Object *obj : *storage) {
 				VoxelObject *vobj = dynamic_cast<VoxelObject*>(obj);
 				if(vobj != nullptr) {
-					double dist = abs2(vobj->model.col(3) - cam->model.col(3));
+					double dist = sqr(vobj->model.col(3) - cam->model.col(3));
 					vector.push_back(std::pair<double,VoxelObject*>(dist, vobj));
 				}
 			}
@@ -108,18 +108,21 @@ public:
 				program.setUniform("u_inv_view", invert(cam->view).data(), 16);
 				program.setUniform("u_lod", ivec2(0,4).data(), 2);
 				
-				fmat4 imv = invert(cam->view*model);
+				// draw cube
+				program.setAttribute("a_vertex", &cube.cube_vertex_buffer);
+				program.setAttribute("a_normal", &cube.cube_normal_buffer);
+				program.setUniform("u_model", model.data(), 16);
+				program.setUniform("u_inv_model", invert(model).data(), 16);
+				program.setUniform("u_tex", vert_to_tex.data(), 16);
+				program.setUniform("u_inv_tex", invert(vert_to_tex).data(), 16);
+				program.evaluate();
+				
 				// check distance
-				if(sqrt(abs2(imv*fvec4(0,0,0,1)) - 1) > 0.5*sqrt(3) + proj.n) {
-					// draw cube
-					program.setAttribute("a_vertex", &cube.cube_vertex_buffer);
-					program.setAttribute("a_normal", &cube.cube_normal_buffer);
-					program.setUniform("u_model", model.data(), 16);
-					program.setUniform("u_inv_model", invert(model).data(), 16);
-					program.setUniform("u_tex", vert_to_tex.data(), 16);
-					program.setUniform("u_inv_tex", invert(vert_to_tex).data(), 16);
-					program.evaluate();
-				} else {
+				fmat4 imv = invert(cam->view*model);
+				fvec4 ca = imv*fvec4(proj.w,proj.h,proj.n,0);
+				float cd = 0.5 + 2*length(ca);
+				bvec4 cmpv = abs(imv*fvec4(0,0,0,1)) < fvec4(cd,cd,cd,1);
+				if(cmpv.x() && cmpv.y() && cmpv.z()) {
 					//draw clipping quad
 					float epsm = (1.0 + 1e-3);
 					fmat4 move = fmat4(
